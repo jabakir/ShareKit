@@ -108,11 +108,6 @@ static NSString *const kSHKFacebookUserInfo =@"kSHKFacebookUserInfo";
 + (BOOL)handleOpenURL:(NSURL*)url 
 {
   Facebook *fb = [SHKFacebook facebook];
-  if (! fb.sessionDelegate) {
-    SHKFacebook *sharer = [[[SHKFacebook alloc] init] autorelease];
-    fb.sessionDelegate = sharer;
-      [sharer retain];//FBConnect does not retain its delegates, we must do it. Released in callback.
-  }
   return [fb handleOpenURL:url];
 }
 
@@ -189,7 +184,7 @@ static NSString *const kSHKFacebookUserInfo =@"kSHKFacebookUserInfo";
 {
   [[NSUserDefaults standardUserDefaults] removeObjectForKey:kSHKStoredItemKey];
   [self flushAccessToken];
-  [[self facebook] logout:nil];
+  [[self facebook] logout];
 }
 
 #pragma mark -
@@ -278,6 +273,10 @@ static NSString *const kSHKFacebookUserInfo =@"kSHKFacebookUserInfo";
 
 - (void)dialogCompleteWithUrl:(NSURL *)url 
 {
+  //if user presses cancel within webview FBDialogue, return string is without any other parameter, see issue #83. We should not show "Saved!".
+  if ([[url absoluteString] isEqualToString:@"fbconnect://success"]) { 
+      [self setQuiet:YES];
+  }
   // error_code=190: user changed password or revoked access to the application,
   // so spin the user back over to authentication :
   NSRange errorRange = [[url absoluteString] rangeOfString:@"error_code=190"];
